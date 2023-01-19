@@ -1,38 +1,87 @@
-<p align="center"><img src="https://i.imgur.com/flcMvDC.png"></p>
+# 실버허그
 
-## Usage
+개발자 인생에서 처음 했던 외주 작업입니다.
 
-### Create an App
+2022년 12월 말 즈음에 의뢰를 받아서 1월초에 1차로 제품을 보냈고,
+피드백을 1월 중후반에 받아서 바로 피드백에 대한 내용도 처리해서 보낸 상태입니다.
 
+노인정에서 대형 TV에 화면 띄워놓고, 지금해야 하는 일정이랑 실제로 Live 접속을 하게 해주는 프로그램으로,
+기존에 웹 환경이 이미 존재하나, 어르신들이 사용하기 웹이 어려워 윈도우 앱으로 만들게 되었습니다.
+
+사실 금액은 크지 않는데, 용돈벌이로는 괜찮은거 같습니다.
+
+첫 외주라 사실 기간을 크게 잡고 했었는데, 해보니 너무 길게 잡았던 것 같습니다.
+
+# 구동 화면
+
+디자이너 없이 작업한 거라, 비교적 초라해 보일수도 있다고 생각이 듭니다.
+
+![화면 캡쳐](./resources/화면%20캡쳐.png)
+
+# ui
+
+머티리얼 ui를 사용해서 개발했는데, 왜 이렇게 없어보일까 생각은 듭니다.
+
+디자인이 초라하면 진짜 없어보이는구나 생각이 듭니다.
+
+# 로그인 및 기타 절차
+
+아이디 패스워드가 이미 입력되어 있으면 자동 로그인이 되고,
+첫 로그인 시에는 입력을 직접 해주고 로그인 버튼을 클릭해야 합니다.
+
+1. 아이디 패스워드 입력 및 로그인 클릭
+2. ipcRenderer.send() -> ipcMain.on() 이벤트 호출 (node 서버쯤)
+3. front 단에서 만든 cookie 및 id, pw 값을 서버로 보냄
+4. request -> event.reply() -> ipcRenderer.on() 여기서 응답을 받음
+5. 받은 메시지 다이얼로그 띄움 (다이얼로그 소스가 home 박혀 있는데, 따로 빼면 좋을듯)
+6. 로그인이 완료되면 cookie 값으로 나머지 데이터 조회 함
+
+# 나머지 데이터
+
+나머지 데이터는 cheerio 라는 라이브러리를 이용하여 크롤링하여 데이터를 가져오게끔 했는데,
+더 좋은 라이브러리가 있는지는 찾아보지 않았고, 사실
+꽤나 잘 가져오기 때문에 별 문제가 되지 않기 때문에, 제가 이후 이 라이브러리를 자주 쓰게 되지 않을까 생각 됩니다.
+
+# Live 접속
+
+사실 이게 조금 고민이었는데, 비디오 데이터만 가져와서
+<video /> 로 출력하면 되지 않나 생각했는데, 그냥 Live 접속을 해야 했습니다.
+
+웹에 이미 접속 button 이 있었기에, 이 버튼을 그냥 그대로 가져 왔습니다.
+fetch 로 똑같이 response 를 보내면 되지 않을까 했는데, 아무런 반응이 없었습니다.
+
+이 버튼을 머티리얼 ui의 테이블에 집어 넣을때, 처음에는 그냥 텍스트로 찍혀서 난감했었습니다.
+
+해당 쉘에서 renderCell 이라는 녀석에 콜백함수를 하나 연결해주었는데,
+```javascript
+  {
+    field: '강의실입장',
+    headerName: '강의실입장',
+    width: 100,
+    renderCell: RenderDate,
+  },
 ```
-# with npx
-$ npx create-nextron-app my-app --example with-typescript-material-ui
 
-# with yarn
-$ yarn create nextron-app my-app --example with-typescript-material-ui
+renderCell 이 옵션 찾는데, 애를 먹었습니다.
 
-# with pnpx
-$ pnpx create-nextron-app my-app --example with-typescript-material-ui
+RenderDate 함수는 아래와 같고,
+```javascript
+const RenderDate = (props) => {
+  const { formattedValue } = props
+  return (
+    <strong>
+      <div dangerouslySetInnerHTML={ {__html: formattedValue} }>
+      </div>
+    </strong>
+  );
+};
 ```
 
-### Install Dependencies
+react에 dangerouslySetInnerHTML 이러한 옵션이 있더군요.
+역시 구글형님 ㅠㅠ
 
-```
-$ cd my-app
+# 총총
 
-# using yarn or npm
-$ yarn (or `npm install`)
+Live 접속시 새창에 메뉴바 같은게 떠있는데, 일렉트론에서 새창에 자동으로 넣는것 같습니다.
 
-# using pnpm
-$ pnpm install --shamefully-hoist
-```
-
-### Use it
-
-```
-# development mode
-$ yarn dev (or `npm run dev` or `pnpm run dev`)
-
-# production build
-$ yarn build (or `npm run build` or `pnpm run build`)
-```
+이 자동으로 넣는 옵션만 제거 하면 될 것 같네요.

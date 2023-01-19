@@ -15,7 +15,6 @@ import { TouchRippleActions } from '@mui/material/ButtonBase/TouchRipple';
 
 const RenderDate = (props) => {
   const { formattedValue } = props
-  console.log('formattedValue', formattedValue)
   return (
     <strong>
       <div dangerouslySetInnerHTML={ {__html: formattedValue} }>
