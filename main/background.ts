@@ -25,10 +25,14 @@ if (isProd) {
   } else {
     const port = process.argv[2];
     await mainWindow.loadURL(`http://localhost:${port}/home`);
-    //mainWindow.webContents.openDevTools();
+    mainWindow.webContents.openDevTools();
   }
 })();
 
 app.on('window-all-closed', () => {
   app.quit();
+});
+
+app.on("browser-window-created", (e, win) => {
+  win.removeMenu();
 });
