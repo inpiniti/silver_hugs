@@ -4,10 +4,14 @@ import {
   BrowserWindowConstructorOptions,
   ipcMain,
   dialog,
+  session,
 } from 'electron';
 import fetch from "node-fetch";
 import Store from 'electron-store';
+import FormData from 'form-data';
+
 const cheerio = require('cheerio');
+const axios = require('axios');
 
 export default (windowName: string, options: BrowserWindowConstructorOptions): BrowserWindow => {
   const key = 'window-state';
@@ -89,11 +93,19 @@ export default (windowName: string, options: BrowserWindowConstructorOptions): B
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
+      webviewTag: true,
       ...options.webPreferences,
     },
   };
   win = new BrowserWindow(browserOptions);
   win.removeMenu()
+
+  let win2;
+  win2 = new BrowserWindow({
+    parent: win,
+    show:false,
+  });
+  win2.removeMenu()
 
   win.on('close', saveState);
 
@@ -114,7 +126,57 @@ export default (windowName: string, options: BrowserWindowConstructorOptions): B
     }
 
     fetchCall().then(data => {
+      session.defaultSession.cookies.set({
+        url : "url", // 기본적으로 입력 해주어야함
+        name : "name",
+        value : cookie,
+        httpOnly : true, // client에서 쿠키를 접근함을 방지하기위해 설정 ( 보안 설정 )
+      })
+        .then(() => {
+          // success
+        }, (error) => {
+          console.error(error)
+        })
+
       event.reply('login', data)
+    })
+  })
+
+  ipcMain.on('homework_proc', (event, arg) => {
+    console.log(arg)
+    const { content, file1, cookie, cpc_cid, cpc_no, idx, homework_idx } = arg
+
+    const fetchCall = async () => {
+      let formData = new FormData();
+      formData.append('content', content);
+      formData.append('file1', file1[0]);
+      formData.append('cpc_cid', cpc_cid);
+      formData.append('cpc_no', cpc_no);
+      formData.append('idx', idx);
+      formData.append('homework_idx', homework_idx);
+
+      console.log('formData', formData)
+
+      const url = `https://sungsan.silverhug.co.kr/cpcenter/mypage/homework_proc.php?`;
+      const result = await axios({
+        url: url,
+        method: 'POST',
+        headers: {
+          Cookie: `PHPSESSID=${cookie}`,
+        },
+        cache: 'no-cache',
+        data: formData,
+        body: `content=${content}&bbb=b1`,
+      })
+        .then(async res => {
+          console.log('res',res)
+          return await res.data;
+        })
+      return result;
+    }
+
+    fetchCall().then(data => {
+      event.reply('homework_proc', data)
     })
   })
 
@@ -164,9 +226,10 @@ export default (windowName: string, options: BrowserWindowConstructorOptions): B
     const date = today.getDate();  // 날짜
 
     const { cookie } = arg
+    let url = ''
     const fetchCall = async () => {
-      const url = `https://sungsan.silverhug.co.kr/cpcenter/mypage/mysc.php?yy=${year}&mm=${month}&dd=${date}`;
-      console.log('url', url)
+      url = `https://sungsan.silverhug.co.kr/cpcenter/mypage/mysc.php?yy=${year}&mm=${month}&dd=${date.toString().padStart(2,"0")}`;
+      console.log('url', url);
       const result = await fetch(url, {
         method: 'GET',
         headers: {
@@ -182,8 +245,9 @@ export default (windowName: string, options: BrowserWindowConstructorOptions): B
       return result
     }
 
-    fetchCall().then(data => {
+    fetchCall().then(async data => {
       const $ = cheerio.load(data);
+
       const list = $('#spcontent_wrap > div.myschedule_in > table:nth-child(3) > tbody > tr').map((i, element) => {
         let tr = { 시간: '', program: '', 활동내용: '', liveType: '', id: 0, 강의실입장: ''};
         tr.id = i+1
@@ -195,6 +259,119 @@ export default (windowName: string, options: BrowserWindowConstructorOptions): B
         return tr
       })
       event.reply('today', list)
+
+      const list2 = $('#spcontent_wrap > div.myschedule_in > table:nth-child(5) > tbody > tr').map((i, element) => {
+        let tr = { No: '', 제출기간: '', 프로그램: '', 담당: '', 유형: '', 미션제목: '', 제출여부: '', 미션평가:'', id: 0};
+        tr.id = i+1
+        tr.No = String($(element).find('td:nth-child(1)').text())
+        tr.제출기간 = String($(element).find('td:nth-of-type(2)').text())
+        tr.프로그램 = String($(element).find('td:nth-of-type(3)').text())
+        tr.담당 = String($(element).find('td:nth-of-type(4)').text())
+        tr.유형 = String($(element).find('td:nth-of-type(5)').text())
+        tr.미션제목 = String($(element).find('td:nth-of-type(6)').text())
+        tr.제출여부 = String($(element).find('td:nth-of-type(7)').text())
+        tr.미션평가 = $(element).find('td:nth-of-type(8) > a').attr('href');
+        return tr;
+      })
+      event.reply('today2', list2);
+
+      const list3 = await $('#spcontent_wrap > div.myschedule_in > table:nth-child(8) > tbody > tr').map(async (i, element) => {
+        let tr = { 번호: '', 미션: '', 미션기한: '', 작성자: '', 미션수행확인: '', id: 0, web: '', video: '' };
+
+        tr.id = i+1
+        tr.번호 = String($(element).find('td:nth-child(1)').text())
+        tr.미션 = String($(element).find('td:nth-of-type(2)').text())
+        tr.미션기한 = String($(element).find('td:nth-of-type(3)').text())
+        tr.작성자 = String($(element).find('td:nth-of-type(4)').text())
+        tr.미션수행확인 = $(element).find('td:nth-of-type(5)').contents()
+        const btn = $(element).find('td:nth-of-type(2) > span.button.pink.small').html().replaceAll('../vod/vod','https://sungsan.silverhug.co.kr/cpcenter/vod/vod');
+        console.log('btn',btn)
+        const url2 = btn.split('window.open(\'')[1].split('\',\'')[0];
+        console.log('url2',url2)
+
+        const videoAsync = async (_url) => {
+          console.log('cookie',cookie)
+          console.log('url',_url.replaceAll('amp;', ''))
+          const result = await fetch(_url.replaceAll('amp;', ''), {
+            method: 'GET',
+            headers: {
+              Cookie: `PHPSESSID=${cookie}`,
+              Host: 'sungsan.silverhug.co.kr',
+              'Accept-Encoding': 'gzip, deflate, br',
+              Connection: 'keep-alive',
+            },
+          })
+            .then(async res => {
+              return await res.text().then(res => res)
+            })
+          return result
+        }
+
+        const arg = await videoAsync(url2).then(data => {
+          const $ = cheerio.load(data);
+          console.log('cheerio')
+          console.log('data',data)
+          return $('body > div').html()
+        });
+        console.log('arg',arg)
+
+        tr.video = arg;
+
+        console.log('tr',tr)
+
+        return tr;
+      })
+
+      Promise.all(
+        list3
+      ).then(data => {
+        console.log('list3',data)
+        event.reply('today3', data)
+      }).catch((err)=>{
+        console.log(err)
+      });
+    })
+  })
+
+  /**
+   * 보더 상세
+   */
+  ipcMain.on('boardModal', (event, arg) => {
+    const { href, cookie } = arg
+    const fetchCall = async () => {
+      const url = `https://sungsan.silverhug.co.kr/cpcenter/mypage/${href}`;
+      const result = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Cookie: `PHPSESSID=${cookie}`,
+        },
+      })
+        .then(async res => {
+          return await res.text().then(res => res)
+        })
+      return result
+    }
+
+    fetchCall().then(data => {
+      const $ = cheerio.load(data);
+
+      event.reply('boardModal', {
+        '구분': $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(1) > td:nth-child(2)').text(),
+        '이름': $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(2) > td:nth-child(2)').text(),
+        '첨부파일': $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(3) > td:nth-child(2)').text(),
+        '과제': $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(4) > td:nth-child(2)').text(),
+        'VOD': $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(5) > td:nth-child(2)').text(),
+        '강사': $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(6) > td:nth-child(2)').text(),
+        '제출기한': $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(7) > td:nth-child(2)').text(),
+        '과제내용': $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(9) > td > table > tbody > tr > td > p').text(),
+        content: $('#textarea').text(),
+        file: $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(13) > td:nth-child(2)').text(),
+        cpc_cid: $('#tab_wrapper > form > input[type=hidden]:nth-child(1)').text(),
+        cpc_no: $('#tab_wrapper > form > input[type=hidden]:nth-child(2)').text(),
+        idx: $('#tab_wrapper > form > input[type=hidden]:nth-child(3)').text(),
+        homework_idx: $('#tab_wrapper > form > input[type=hidden]:nth-child(4)').text(),
+
+      })
     })
   })
 
