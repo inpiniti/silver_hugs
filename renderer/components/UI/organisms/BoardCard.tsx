@@ -14,9 +14,10 @@ type BoardCard = {
   rows?: any[],
   boxHeight?: number,
   columns?: GridColDef[],
+  onClick?: Function,
 }
 
-function BoardCard({icon, title, rows, boxHeight = 371, columns = [
+function BoardCard({icon, title, rows, boxHeight = 371, onClick, columns = [
   {
     field: 'id',
     headerName: '번호',
@@ -54,7 +55,7 @@ function BoardCard({icon, title, rows, boxHeight = 371, columns = [
           <DataGrid
             rows={rows}
             columns={columns}
-            pageSize={30}
+            //pageSize={30}
             experimentalFeatures={{ newEditingApi: true }}
             disableColumnMenu
             hideFooter
