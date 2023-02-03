@@ -12,7 +12,6 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 
-
 function Home() {
   const [userData, setUserData] = useState({
     id: '',
@@ -24,6 +23,27 @@ function Home() {
 
   const [today, setToday] = useState([{
     시간: '', program: '', 활동내용: '', liveType: '', id: 0, 강의실입장: ''
+  }])
+
+  const [today2, setToday2] = useState([{
+    id: 0,
+    No: '',
+    제출기간: '',
+    프로그램: '',
+    담당: '',
+    유형: '',
+    미션제목: '',
+    제출여부: '',
+    미션평가: '',
+  }])
+
+  const [today3, setToday3] = useState([{
+    id: 0,
+    번호: '',
+    미션: '',
+    미션기한: '',
+    작성자: '',
+    미션수행확인: '',
   }])
 
   const [weather, setWeather] = useState({})
@@ -84,6 +104,14 @@ function Home() {
 
     ipcRenderer.on('today', (event, today) => {
       setToday(today)
+    })
+
+    ipcRenderer.on('today2', (event, today2) => {
+      setToday2(today2)
+    })
+
+    ipcRenderer.on('today3', (event, today3) => {
+      setToday3(today3)
     })
 
     ipcRenderer.on('notice', (event, notice) => {
@@ -156,6 +184,8 @@ function Home() {
         notice={notice}
         job={job}
         today={today}
+        today2={today2}
+        today3={today3}
         cookie={userData.cookie}
         weather={weather}
       />
