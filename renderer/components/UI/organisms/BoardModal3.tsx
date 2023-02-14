@@ -20,41 +20,35 @@ import DialogActions from "@mui/material/DialogActions";
 import Dialog from "@mui/material/Dialog";
 
 type BoardModalType = {
-  구분: string,
-  이름: string,
-  첨부파일: string,
-  과제: string,
-  VOD: string,
+  제목: string,
   강사: string,
   제출기한: string,
-  과제내용: string,
-  cpc_cid: string,
-  cpc_no: string,
+  제출파일: string,
+
+  user_id: string,
+  gubun: string,
   idx: string,
-  homework_idx: string,
-  content: string,
-  file: string,
+
+  st_content: string,
+  st_file1: string,
 }
 
-function BoardModal({ open, onClickClose, href, cookie }) {
+function BoardModal3({ open, onClickClose, href, cookie }) {
+  console.log('BoardModal3', href );
+
   const [board, setBoard] = useState<BoardModalType>({
-    구분: '',
-    이름: '',
-    첨부파일: '',
-    과제: '',
-    VOD: '',
+    제목: '',
     강사: '',
     제출기한: '',
-    과제내용: '',
-    cpc_cid: '',
-    cpc_no: '',
+    제출파일: '',
+    user_id: '',
+    gubun: '',
     idx: '',
-    homework_idx: '',
-    content: '',
-    file: '',
+    st_content: '',
+    st_file1: '',
   });
   const [attachment, setAttachment] = useState(null);
-  const [content, setContent] = useState(board?.content || '');
+  const [st_content, setSt_content] = useState(board?.st_content || '');
 
   const [open2, setOpen2] = React.useState(false);
   const handleClickOpen = () => setOpen2(true);
@@ -65,22 +59,22 @@ function BoardModal({ open, onClickClose, href, cookie }) {
   // 초기화
   useEffect(() => {
     // get 저장소
-    ipcRenderer.send('boardModal', {
+    ipcRenderer.send('boardModal3', {
       href: href,
       cookie: cookie,
     });
   }, [open])
 
   useEffect(() => {
-    ipcRenderer.on('boardModal', (event, board: BoardModalType) => {
+    ipcRenderer.on('boardModal3', (event, board: BoardModalType) => {
       setBoard(old => {
         return board;
       });
       console.log('useEffect() > board', board)
-      setContent(old => board.content)
+      setSt_content(old => board.st_content)
     })
 
-    ipcRenderer.on('homework_proc', (event, args) => {
+    ipcRenderer.on('mission_proc', (event, args) => {
       const msg = args.split('alert(\'')[1].split('\');')[0];
       setMsg(msg);
       handleClickOpen();
@@ -95,20 +89,19 @@ function BoardModal({ open, onClickClose, href, cookie }) {
 
   const handleChangeContent = (event) => {
     const content = event.target.value;
-    setContent(content);
+    setSt_content(content);
   }
 
   const handleSubmit = () => {
     console.log('board', board);
 
-    ipcRenderer.send('homework_proc', {
-      content: content,
-      file1: attachment != null ? [attachment].map(f => f.path) : '',
+    ipcRenderer.send('mission_proc', {
+      st_content: st_content,
+      st_file1: attachment != null ? [attachment].map(f => f.path) : '',
       cookie: cookie,
-      cpc_cid: board.cpc_cid,
-      cpc_no: board.cpc_no,
+      user_id: board.user_id,
+      gubun: board.gubun,
       idx: board.idx,
-      homework_idx: board.homework_idx,
     })
   }
 
@@ -122,62 +115,18 @@ function BoardModal({ open, onClickClose, href, cookie }) {
       >
         <Box className={`${styles.box}`}>
           <Typography variant="h6" gutterBottom>
-            과제 제출
+            미션 제출
           </Typography>
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6}>
               <TextField
-                label="구분"
+                label="제목"
                 fullWidth
-                value={board.구분}
+                value={board.제목}
                 size="small"
                 InputProps={{
                   readOnly: true,
                 }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                InputProps={{
-                  readOnly: true,
-                }}
-                label="이름"
-                fullWidth
-                size="small"
-                value={board.이름}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                InputProps={{
-                  readOnly: true,
-                }}
-                label="첨부파일"
-                fullWidth
-                size="small"
-                value={board.첨부파일}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                InputProps={{
-                  readOnly: true,
-                }}
-                label="과제"
-                fullWidth
-                size="small"
-                value={board.과제}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                InputProps={{
-                  readOnly: true,
-                }}
-                label="VOD"
-                fullWidth
-                size="small"
-                value={board.VOD}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -191,7 +140,7 @@ function BoardModal({ open, onClickClose, href, cookie }) {
                 value={board.강사}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 InputProps={{
                   readOnly: true,
@@ -204,23 +153,13 @@ function BoardModal({ open, onClickClose, href, cookie }) {
             </Grid>
             <Grid item xs={12}>
               <TextField
-                InputProps={{
-                  readOnly: true,
-                }}
-                label="과제내용"
-                fullWidth
-                value={board.과제내용}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                name="content"
+                name="st_content"
                 label="제출내용"
                 onChange={handleChangeContent}
                 multiline
                 rows={8}
                 fullWidth
-                value={content}
+                value={st_content}
               />
             </Grid>
             <Grid item xs={12}>
@@ -231,7 +170,7 @@ function BoardModal({ open, onClickClose, href, cookie }) {
                 파일 선택
                 <input
                   type="file"
-                  name="file1"
+                  name="st_file1"
                   onChange={handleChange}
                   hidden
                 />
@@ -244,7 +183,7 @@ function BoardModal({ open, onClickClose, href, cookie }) {
                 }}
                 label="제출파일"
                 fullWidth
-                value={ attachment?.name || board?.file || "" }
+                value={ attachment?.name || board?.st_file1 || "" }
               />
             </Grid>
             <Grid item xs={12}>
@@ -281,4 +220,4 @@ function BoardModal({ open, onClickClose, href, cookie }) {
   );
 };
 
-export default BoardModal;
+export default BoardModal3;

@@ -14,6 +14,7 @@ import Button from '@mui/material/Button';
 import { TouchRippleActions } from '@mui/material/ButtonBase/TouchRipple';
 import BoardModal from '../UI/organisms/BoardModal';
 import BoardModal2 from "../UI/organisms/BoardModal2";
+import BoardModal3 from "../UI/organisms/BoardModal3";
 
 type BoardsType = {
   notice?: any,
@@ -65,6 +66,18 @@ export default function Boards({
       <Button variant="contained" href="#contained-buttons" onClick={() => {
         setVodOpen(true);
         setVod(formattedValue);
+      }}>
+        VIEW
+      </Button>
+    );
+  };
+
+  const RenderDate4 = (props) => {
+    const { formattedValue } = props
+    return (
+      <Button variant="contained" href="#contained-buttons" onClick={() => {
+        setBoardOpen3(true);
+        setHref3(formattedValue);
       }}>
         VIEW
       </Button>
@@ -173,7 +186,7 @@ export default function Boards({
     {
       field: '미션수행확인',
       headerName: '미션수행확인',
-      renderCell: RenderDate2,
+      renderCell: RenderDate4,
       width: 130,
     },
   ];
@@ -229,6 +242,12 @@ export default function Boards({
   const handleVodOpen = () => setVodOpen(true);
   const handleVodClose = () => setVodOpen(false);
 
+  const [boardOpen3, setBoardOpen3] = React.useState(false);
+  const handleBoardOpen3 = () => setBoardOpen3(true);
+  const handleBoardClose3 = () => setBoardOpen3(false);
+
+  const [href3, setHref3] = React.useState('');
+
   console.log('today3', today3)
 
   return (
@@ -267,6 +286,7 @@ export default function Boards({
       <SettingModal onClickClose={handleSettingClose} open={settingOpen} cookie={cookie} />
       <BoardModal onClickClose={handleBoardClose} open={boardOpen} href={href} cookie={cookie} />
       <BoardModal2 onClickClose={handleVodClose} open={vodOpen} vod={vod} />
+      <BoardModal3 onClickClose={handleBoardClose3} open={boardOpen3} href={href3} cookie={cookie} />
       <Fab sx={{position: 'fixed', bottom: 16, right: 16}} aria-label={'Add'} color={'primary'} onClick={handleSettingOpen}>
         <AddIcon />
       </Fab>

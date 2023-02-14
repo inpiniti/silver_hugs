@@ -9,6 +9,7 @@ import {
 import fetch from "node-fetch";
 import Store from 'electron-store';
 import FormData from 'form-data';
+import fs from "fs";
 
 const cheerio = require('cheerio');
 const axios = require('axios');
@@ -143,17 +144,24 @@ export default (windowName: string, options: BrowserWindowConstructorOptions): B
   })
 
   ipcMain.on('homework_proc', (event, arg) => {
-    console.log(arg)
     const { content, file1, cookie, cpc_cid, cpc_no, idx, homework_idx } = arg
+
+    console.log('file1', file1)
+
+
 
     const fetchCall = async () => {
       let formData = new FormData();
       formData.append('content', content);
-      formData.append('file1', file1[0]);
+      if(file1 != '') {
+        const stats = fs.statSync(file1[0]);
+        const fileSizeInBytes = stats.size;
+        const fileStream = fs.createReadStream(file1[0]);
+        formData.append('file1', fileStream, { knownLength: fileSizeInBytes });
+      }
       formData.append('cpc_cid', cpc_cid);
       formData.append('cpc_no', cpc_no);
       formData.append('idx', idx);
-      formData.append('homework_idx', homework_idx);
 
       console.log('formData', formData)
 
@@ -166,10 +174,52 @@ export default (windowName: string, options: BrowserWindowConstructorOptions): B
         },
         cache: 'no-cache',
         data: formData,
-        body: `content=${content}&bbb=b1`,
+        body: `content=${content}`,
       })
         .then(async res => {
-          console.log('res',res)
+          return await res.data;
+        })
+      return result;
+    }
+
+    fetchCall().then(data => {
+      event.reply('homework_proc', data)
+    })
+  })
+
+  ipcMain.on('mission_proc', (event, arg) => {
+    const { st_content, st_file1, cookie, user_id, gubun, idx } = arg
+
+    const fetchCall = async () => {
+      let formData = new FormData();
+      formData.append('st_content', st_content);
+      if(st_file1 != '') {
+        const stats = fs.statSync(st_file1[0]);
+        const fileSizeInBytes = stats.size;
+        const fileStream = fs.createReadStream(st_file1[0]);
+        formData.append('st_file1', fileStream, { knownLength: fileSizeInBytes });
+      }
+      formData.append('user_id', user_id);
+      formData.append('gubun', gubun);
+      formData.append('idx', idx);
+
+      console.log('user_id', user_id)
+      console.log('gubun', gubun)
+      console.log('idx', idx)
+      console.log('st_content', st_content)
+
+      const url = `https://sungsan.silverhug.co.kr/cpcenter/mypage/mission_proc.php?`;
+      const result = await axios({
+        url: url,
+        method: 'POST',
+        headers: {
+          Cookie: `PHPSESSID=${cookie}`,
+        },
+        cache: 'no-cache',
+        data: formData,
+        body: `st_content=${st_content}`,
+      })
+        .then(async res => {
           return await res.data;
         })
       return result;
@@ -224,6 +274,7 @@ export default (windowName: string, options: BrowserWindowConstructorOptions): B
     const year = today.getFullYear(); // 년도
     const month = (today.getMonth() + 1).toString().padStart(2, '0');  // 월
     const date = today.getDate();  // 날짜
+    //const date = 2;
 
     const { cookie } = arg
     let url = ''
@@ -283,11 +334,10 @@ export default (windowName: string, options: BrowserWindowConstructorOptions): B
         tr.미션 = String($(element).find('td:nth-of-type(2)').text())
         tr.미션기한 = String($(element).find('td:nth-of-type(3)').text())
         tr.작성자 = String($(element).find('td:nth-of-type(4)').text())
-        tr.미션수행확인 = $(element).find('td:nth-of-type(5)').contents()
+        tr.미션수행확인 = $(element).find('td:nth-of-type(5) > a').attr('href');
+
         const btn = $(element).find('td:nth-of-type(2) > span.button.pink.small').html().replaceAll('../vod/vod','https://sungsan.silverhug.co.kr/cpcenter/vod/vod');
-        console.log('btn',btn)
         const url2 = btn.split('window.open(\'')[1].split('\',\'')[0];
-        console.log('url2',url2)
 
         const videoAsync = async (_url) => {
           console.log('cookie',cookie)
@@ -310,14 +360,10 @@ export default (windowName: string, options: BrowserWindowConstructorOptions): B
         const arg = await videoAsync(url2).then(data => {
           const $ = cheerio.load(data);
           console.log('cheerio')
-          console.log('data',data)
           return $('body > div').html()
         });
-        console.log('arg',arg)
 
         tr.video = arg;
-
-        console.log('tr',tr)
 
         return tr;
       })
@@ -325,7 +371,6 @@ export default (windowName: string, options: BrowserWindowConstructorOptions): B
       Promise.all(
         list3
       ).then(data => {
-        console.log('list3',data)
         event.reply('today3', data)
       }).catch((err)=>{
         console.log(err)
@@ -366,11 +411,52 @@ export default (windowName: string, options: BrowserWindowConstructorOptions): B
         '과제내용': $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(9) > td > table > tbody > tr > td > p').text(),
         content: $('#textarea').text(),
         file: $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(13) > td:nth-child(2)').text(),
-        cpc_cid: $('#tab_wrapper > form > input[type=hidden]:nth-child(1)').text(),
-        cpc_no: $('#tab_wrapper > form > input[type=hidden]:nth-child(2)').text(),
-        idx: $('#tab_wrapper > form > input[type=hidden]:nth-child(3)').text(),
-        homework_idx: $('#tab_wrapper > form > input[type=hidden]:nth-child(4)').text(),
+        cpc_cid: $('#tab_wrapper > form > input[type=hidden]:nth-child(1)').attr('value'),
+        cpc_no: $('#tab_wrapper > form > input[type=hidden]:nth-child(2)').attr('value'),
+        idx: $('#tab_wrapper > form > input[type=hidden]:nth-child(3)').attr('value'),
+        homework_idx: $('#tab_wrapper > form > input[type=hidden]:nth-child(4)').attr('value'),
+      })
+    })
+  })
 
+  /**
+   * 보더 상세
+   */
+  ipcMain.on('boardModal3', (event, arg) => {
+    console.log('boardModal3 1')
+    const { href, cookie } = arg
+    const fetchCall = async () => {
+      const url = `https://sungsan.silverhug.co.kr/cpcenter/mypage/${href}`;
+      console.log('boardModal3 url', url)
+      const result = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Cookie: `PHPSESSID=${cookie}`,
+        },
+      })
+        .then(async res => {
+          console.log('boardModal3 2')
+          return await res.text().then(res => res)
+        })
+      return result
+    }
+
+    fetchCall().then(data => {
+      console.log('boardModal3 3')
+      const $ = cheerio.load(data);
+
+
+      console.log('boardModal3 4', data)
+      event.reply('boardModal3', {
+        '제목': $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(1) > td:nth-child(2)').text(),
+        '강사': $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(2) > td:nth-child(2)').text(),
+        '제출기한': $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(3) > td:nth-child(2)').text(),
+        '제출파일': $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(4) > td:nth-child(2)').text(),
+        st_content: $('#textarea').text(),
+        st_file1: $('#tab_wrapper > form > table > tbody > tr:nth-child(1) > td > table > tbody > tr:nth-child(9) > td:nth-child(2) > span').text(),
+        user_id: $('#tab_wrapper > form > input[type=hidden]:nth-child(1)').attr('value'),
+        gubun: $('#tab_wrapper > form > input[type=hidden]:nth-child(2)').attr('value'),
+        idx: $('#tab_wrapper > form > input[type=hidden]:nth-child(3)').attr('value'),
       })
     })
   })
